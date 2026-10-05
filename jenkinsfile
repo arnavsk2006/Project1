@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME = "devops-mini-project"
+        PORT = "8080"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Fetching source code from repository...'
+                checkout scm
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                echo 'Building Docker container image...'
+                sh "docker build -t ${APP_NAME}:latest ."
+            }
+        }
+
+        stage('Clean Old Container') {
+            steps {
+                echo 'Stopping existing running instance...'
+                sh '''
+                    docker stop ${APP_NAME} || true
+                    docker rm ${APP_NAME} || true
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Spinning up new application container...'
+                sh "docker run -d -p ${PORT}:80 --name ${APP_NAME} ${APP_NAME}:latest"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment successful! View app at http://localhost:${PORT}"
+        }
+        failure {
+            echo "Pipeline failed. Review build logs."
+        }
+    }
+}
